@@ -1,0 +1,25 @@
+{
+  "name": "pico8-web-emulator",
+  "version": "1.0.0",
+  "description": "Web-based emulator for PICO-8 games. Target game for MVP is Celeste Classic.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Brooklyn-Dev/pico8-web-emulator.git"
+  },
+  "keywords": [],
+  "author": "Brooklyn Baylis",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Brooklyn-Dev/pico8-web-emulator/issues"
+  },
+  "homepage": "https://github.com/Brooklyn-Dev/pico8-web-emulator#readme",
+  "devDependencies": {
+    "vite": "^7.0.0"
+  }
+}
