@@ -1,8 +1,8 @@
-import { loadP8PNG } from "./cartridge";
+import { extractLuaCode, extractP8Bytes } from "./cartridge";
 
 async function start() {
-  const cartridge = await loadP8PNG("/assets/celeste.p8.png");
-  console.log("Loaded cartridge:", cartridge);
+	const bytes = await extractP8Bytes("/assets/celeste.p8.png");
+	console.log(extractLuaCode(bytes));
 }
 
 start();
