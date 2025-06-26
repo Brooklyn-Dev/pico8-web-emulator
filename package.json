@@ -20,6 +20,10 @@
   },
   "homepage": "https://github.com/Brooklyn-Dev/pico8-web-emulator#readme",
   "devDependencies": {
+    "fengari": "^0.1.4",
     "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "fengari-web": "^0.1.4"
   }
 }
