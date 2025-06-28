@@ -61,9 +61,17 @@ export default class LuaVM {
 			args.forEach((arg) => this.#pushValue(arg));
 
 			// Call function
-			const numResults =
-				functionName === "_draw" || functionName === "_update" || functionName === "_init" ? 0 : 1;
+			let numResults;
+			if (functionName === "_draw" || functionName === "_update" || functionName === "_init") {
+				numResults = 0;
+			} else if (functionName === "camera") {
+				numResults = 2;
+			} else {
+				numResults = 1; // Default
+			}
+
 			const result = lua.lua_pcall(this.L, args.length, numResults, 0);
+
 			if (result !== lua.LUA_OK) {
 				console.error(`Function '${functionName}' failed with error code:`, result);
 				return this.#logLuaError(`Error calling '${functionName}'`);
@@ -182,7 +190,14 @@ export default class LuaVM {
 	#logLuaError(prefix = "Lua error") {
 		try {
 			let msgPtr = lua.lua_tostring(this.L, -1);
-			let msg = msgPtr ? to_jsstring(msgPtr) : "Error conversion failed";
+			if (!msgPtr) {
+				const type = lua.lua_type(this.L, -1);
+				console.error(`${prefix}: non-string error, type =`, lua.lua_typename(this.L, type));
+				lua.lua_pop(this.L, 1);
+				return false;
+			}
+
+			let msg = to_jsstring(msgPtr);
 			console.error(`${prefix}:`, msg);
 			lua.lua_pop(this.L, 1);
 			return false;
