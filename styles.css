@@ -1,0 +1,136 @@
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	font-family: monospace;
+	background: #1e1e1e;
+	color: white;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	min-height: 100vh;
+	overflow: hidden;
+}
+
+h1 {
+	margin: 1rem 0 0.5rem 0;
+}
+
+button#open-selector {
+	margin-bottom: 1rem;
+	padding: 0.6rem 1.2rem;
+	font-size: 1rem;
+	cursor: pointer;
+	background: #444;
+	color: white;
+	border: none;
+	border-radius: 6px;
+	transition: background 0.2s ease;
+}
+
+button#open-selector:hover {
+	background: #666;
+}
+
+.game-container {
+	width: min(80vw, 80vh);
+	height: min(80vw, 80vh);
+	position: relative;
+	font-family: monospace;
+	user-select: none;
+	color: #0f0;
+	background: black;
+	border: 1px solid #ccc;
+	overflow: hidden;
+}
+
+canvas {
+	width: 100%;
+	height: 100%;
+	image-rendering: pixelated;
+	display: block;
+}
+
+#selector-popup {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: #222;
+	border-radius: 12px;
+	padding: 2rem 3rem;
+	box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+	display: none;
+	z-index: 1000;
+	max-width: 90vw;
+	max-height: 80vh;
+	overflow-y: auto;
+}
+
+#selector-popup .selector {
+	display: flex;
+	gap: 1.5rem;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+#selector-popup .cartridge {
+	width: 220px;
+	border-radius: 8px;
+	border: 2px solid transparent;
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
+	height: auto;
+	user-select: none;
+}
+
+#selector-popup .cartridge:hover {
+	transform: translateY(-6px);
+	box-shadow: 0 6px 16px rgba(255, 255, 255, 0.15);
+}
+
+#selector-popup .cartridge.selected {
+	border-color: #fff;
+	box-shadow: 0 0 0 3px #fff, 0 6px 16px rgba(255, 255, 255, 0.3);
+}
+
+#selector-popup button#close-selector {
+	display: block;
+	margin: 1.5rem auto 0 auto;
+	background: #444;
+	border: none;
+	color: white;
+	padding: 0.7rem 1.5rem;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 1.1rem;
+	transition: background 0.2s ease;
+}
+
+#selector-popup button#close-selector:hover {
+	background: #666;
+}
+
+#backdrop {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.6);
+	display: none;
+	z-index: 900;
+}
+
+#no-cart-message {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	font-size: 1.2rem;
+	pointer-events: none;
+	white-space: nowrap;
+	opacity: 0.7;
+}

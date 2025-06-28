@@ -14,16 +14,8 @@ container.appendChild(canvas);
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
-// Load cartridge data
-const cartridge = await extractP8Bytes("/assets/wander.p8.png");
-const lua = extractLua(cartridge);
-const gfx = extractGFX(cartridge);
-const map = extractMap(cartridge);
-const gff = extractGFF(cartridge);
-
 // Keyboard input
 const keyState = new Array(8).fill(false);
-let prevKeyState = new Array(8).fill(false);
 
 const keyMap = {
 	ArrowLeft: 0,
@@ -48,34 +40,79 @@ document.addEventListener("keyup", (e) => {
 	}
 });
 
-function updateKeyStates() {
-	prevKeyState = [...keyState];
-}
-
-// Bind API resource to picoAPI
-picoAPI.bindAPIResources(ctx, keyState, { gfx, map, gff });
-
-// Init Lua VM and register PICO-8 functions
-const vm = new LuaVM();
-
-Object.entries(picoAPI).forEach(([name, fn]) => {
-	if (typeof fn === "function" && name !== "bindAPIResources") {
-		vm.addFunction(name, fn);
-	}
-});
-
-// Transpile and execute Lua code
-const transpiledLua = transpileLua(lua);
-console.log(transpiledLua);
-vm.executeCode(transpiledLua);
-
 const PICO8_FPS = 30;
 const FRAME_TIME = 1000 / PICO8_FPS;
 
 let lastFrameTime = 0;
 let accumulatedTime = 0;
 
+let vm = null;
+let luaCode = null;
+let gfx = null;
+let map = null;
+let gff = null;
+
+const rawCartCache = {};
+
+let loadingCartridge = false;
+
+async function loadCartridge(cartridgePath) {
+	loadingCartridge = true;
+
+	lastFrameTime = 0;
+	accumulatedTime = 0;
+
+	// Load cartridge data
+	let cartridgeData;
+	if (rawCartCache[cartridgePath]) {
+		cartridgeData = rawCartCache[cartridgePath];
+	} else {
+		cartridgeData = await extractP8Bytes(cartridgePath);
+		rawCartCache[cartridgePath] = cartridgeData;
+	}
+
+	luaCode = extractLua(cartridgeData);
+	gfx = extractGFX(cartridgeData);
+	map = extractMap(cartridgeData);
+	gff = extractGFF(cartridgeData);
+
+	// Reset key state
+	keyState.fill(false);
+
+	// Bind API resource to picoAPI
+	picoAPI.bindAPIResources(ctx, keyState, { gfx, map, gff });
+
+	// Init Lua VM and register PICO-8 functions
+	vm = null;
+	vm = new LuaVM();
+	Object.entries(picoAPI).forEach(([name, fn]) => {
+		if (typeof fn === "function" && name !== "bindAPIResources") {
+			vm.addFunction(name, fn);
+		}
+	});
+
+	// Transpile and execute Lua code
+	const transpiledLua = transpileLua(luaCode);
+	console.log(`Loaded cartridge: ${cartridgePath}`);
+	console.log(transpiledLua);
+
+	vm.executeCode(transpiledLua);
+	vm.callFunction("_init");
+
+	loadingCartridge = false;
+	showNoCartridgeMessage(false);
+
+	requestAnimationFrame(gameLoop);
+}
+
 function gameLoop(timestamp) {
+	if (!vm) {
+		showNoCartridgeMessage(true);
+		return;
+	}
+
+	if (loadingCartridge) return;
+
 	requestAnimationFrame(gameLoop);
 
 	const deltaTime = timestamp - lastFrameTime;
@@ -89,11 +126,52 @@ function gameLoop(timestamp) {
 		vm.callFunction("_update");
 		vm.callFunction("_draw");
 
-		updateKeyStates();
-
 		accumulatedTime -= FRAME_TIME;
 	}
 }
 
-vm.callFunction("_init");
-requestAnimationFrame(gameLoop);
+// UI
+const selectorPopup = document.getElementById("selector-popup");
+const backdrop = document.getElementById("backdrop");
+const openSelectorBtn = document.getElementById("open-selector");
+const closeSelectorBtn = document.getElementById("close-selector");
+const cartridges = document.querySelectorAll(".cartridge");
+const noCartMessage = document.getElementById("no-cart-message");
+
+// Show cartridge selector popup
+function openSelector() {
+	selectorPopup.style.display = "block";
+	backdrop.style.display = "block";
+}
+
+// Hide cartridge selector popup
+function closeSelector() {
+	selectorPopup.style.display = "none";
+	backdrop.style.display = "none";
+}
+
+// Highlight selected cartridge
+function highlightSelected(selectedImg) {
+	cartridges.forEach((img) => img.classList.remove("selected"));
+	if (selectedImg) selectedImg.classList.add("selected");
+}
+
+function showNoCartridgeMessage(show) {
+	noCartMessage.style.display = show ? "block" : "none";
+}
+
+// Load cartridge and close popup
+async function onCartridgeClick(e) {
+	const img = e.currentTarget;
+	const cartPath = `/${img.dataset.cart}`;
+
+	highlightSelected(img);
+	closeSelector();
+	loadCartridge(cartPath);
+}
+
+// Event listeners
+openSelectorBtn.addEventListener("click", openSelector);
+closeSelectorBtn.addEventListener("click", closeSelector);
+backdrop.addEventListener("click", closeSelector);
+cartridges.forEach((img) => img.addEventListener("click", onCartridgeClick));

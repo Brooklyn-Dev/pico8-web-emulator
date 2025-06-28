@@ -5,34 +5,37 @@
 		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 		<title>PICO-8 Emulator</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<style>
-			html,
-			body {
-				margin: 0;
-				height: 100%;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				font-family: monospace;
-				overflow: hidden;
-			}
-
-			.game-container {
-				width: min(80vw, 80vh);
-				height: min(80vw, 80vh);
-			}
-
-			canvas {
-				width: 100%;
-				height: 100%;
-				image-rendering: pixelated;
-				border: 1px solid #ccc;
-				background: white;
-			}
-		</style>
+		<link rel="stylesheet" href="styles.css" />
 	</head>
 	<body>
-		<div class="game-container"></div>
+		<main>
+			<h1>PICO-8 Emulator</h1>
+
+			<button id="open-selector">Select Cartridge</button>
+
+			<div class="game-container">
+				<div id="no-cart-message">No cartridge loaded</div>
+			</div>
+
+			<div id="selector-popup" role="dialog" aria-modal="true" aria-labelledby="selector-title">
+				<h2 id="selector-title" style="text-align: center; margin-top: 0; margin-bottom: 1rem">
+					Choose Cartridge
+				</h2>
+				<div class="selector">
+					<img
+						src="/assets/wander.p8.png"
+						alt="wander cartridge"
+						class="cartridge"
+						data-cart="wander.p8.png"
+					/>
+					<img src="/assets/waves.p8.png" alt="waves cartridge" class="cartridge" data-cart="waves.p8.png" />
+				</div>
+				<button id="close-selector">Close</button>
+			</div>
+
+			<div id="backdrop"></div>
+		</main>
+
 		<script type="module" src="/src/main.js"></script>
 	</body>
 </html>
