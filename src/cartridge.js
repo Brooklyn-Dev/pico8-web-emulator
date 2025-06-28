@@ -52,7 +52,7 @@ export async function extractP8Bytes(url) {
 	return new Uint8Array(byteArray);
 }
 
-export function extractLuaCode(byteArray) {
+export function extractLua(byteArray) {
 	// Bytes 0x4300-0x7fff are the Lua code
 	const luaSection = byteArray.slice(0x4300);
 
@@ -114,7 +114,7 @@ function decompressNewFormat(luaSection) {
 
 	// Read multiple bits (LSB first) and convert to integer
 	function readBits(count) {
-		if (streamPos + count > streamStr.length) return "0";
+		if (streamPos + count > streamStr.length) return 0;
 		const bits = streamStr.slice(streamPos, streamPos + count);
 		streamPos += count;
 		return parseInt(bits.split("").reverse().join(""), 2);

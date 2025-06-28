@@ -1,12 +1,38 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>PICO-8 Emulator</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-  </head>
-  <body>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<title>PICO-8 Emulator</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<style>
+			html,
+			body {
+				margin: 0;
+				height: 100%;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				font-family: monospace;
+				overflow: hidden;
+			}
+
+			.game-container {
+				width: min(80vw, 80vh);
+				height: min(80vw, 80vh);
+			}
+
+			canvas {
+				width: 100%;
+				height: 100%;
+				image-rendering: pixelated;
+				border: 1px solid #ccc;
+				background: white;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="game-container"></div>
+		<script type="module" src="/src/main.js"></script>
+	</body>
 </html>

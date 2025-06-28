@@ -1,26 +1,40 @@
-import { extractLuaCode, extractP8Bytes } from "./cartridge";
-import { LuaVM } from "./luaVM";
+import { extractLua, extractP8Bytes } from "./cartridge";
+import LuaVM from "./luaVM";
+import transpileLua from "./transpileLua.js";
+import * as picoAPI from "./pico8api.js";
 
-async function start() {
-	// const bytes = await extractP8Bytes("/assets/celeste.p8.png");
-	// console.log(extractLuaCode(bytes));
+const canvas = document.createElement("canvas");
+canvas.width = 128;
+canvas.height = 128;
 
-	const vm = new LuaVM();
+const container = document.querySelector(".game-container");
+container.appendChild(canvas);
 
-	vm.executeCode(`
-		print("Lua VM started")
-		num = 42
-		function greet(name)
-			return "Hello, " .. name
-		end
-	`);
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
 
-	console.log("num:", vm.getGlobal("num")); // 42
+const cartridge = await extractP8Bytes("/assets/waves.p8.png");
+const lua = extractLua(cartridge);
 
-	vm.setGlobal("num", 99);
-	console.log("updated num:", vm.getGlobal("num")); // 99
+picoAPI.bindAPIResources(ctx);
 
-	console.log("greet('Bob'):", vm.callFunction("greet", "Bob")); // "Hello, Bob"
+const vm = new LuaVM();
+
+// Register PICO-8 functions
+Object.entries(picoAPI).forEach(([name, fn]) => {
+	if (typeof fn === "function" && name !== "bindAPIResources") {
+		vm.addFunction(name, fn);
+	}
+});
+
+const transpiledLua = transpileLua(lua);
+vm.executeCode(transpiledLua);
+
+function gameLoop() {
+	ctx.clearRect(0, 0, 128, 128);
+	vm.callFunction("_draw");
+
+	requestAnimationFrame(gameLoop);
 }
 
-start();
+gameLoop();
