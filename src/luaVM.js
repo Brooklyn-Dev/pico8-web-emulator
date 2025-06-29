@@ -71,7 +71,6 @@ export default class LuaVM {
 			}
 
 			const result = lua.lua_pcall(this.L, args.length, numResults, 0);
-
 			if (result !== lua.LUA_OK) {
 				console.error(`Function '${functionName}' failed with error code:`, result);
 				return this.#logLuaError(`Error calling '${functionName}'`);

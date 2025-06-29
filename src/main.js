@@ -1,4 +1,4 @@
-import { extractGFF, extractGFX, extractLua, extractMap, extractP8Bytes } from "./cartridge";
+import { extractPico8Bytes, extractGFX, extractMap, extractGFF, extractLua } from "./cartridge";
 import LuaVM from "./luaVM";
 import transpileLua from "./transpileLua.js";
 import * as picoAPI from "./pico8api.js";
@@ -105,7 +105,7 @@ async function loadCartridge(cartridgePath) {
 		if (rawCartCache[cartridgePath]) {
 			cartridgeData = rawCartCache[cartridgePath];
 		} else {
-			cartridgeData = await extractP8Bytes(cartridgePath);
+			cartridgeData = await extractPico8Bytes(cartridgePath);
 			rawCartCache[cartridgePath] = cartridgeData;
 		}
 
