@@ -57,52 +57,69 @@ const rawCartCache = {};
 let loadingCartridge = false;
 
 async function loadCartridge(cartridgePath) {
-	loadingCartridge = true;
+	try {
+		loadingCartridge = true;
 
-	lastFrameTime = 0;
-	accumulatedTime = 0;
+		lastFrameTime = 0;
+		accumulatedTime = 0;
 
-	// Load cartridge data
-	let cartridgeData;
-	if (rawCartCache[cartridgePath]) {
-		cartridgeData = rawCartCache[cartridgePath];
-	} else {
-		cartridgeData = await extractP8Bytes(cartridgePath);
-		rawCartCache[cartridgePath] = cartridgeData;
-	}
-
-	luaCode = extractLua(cartridgeData);
-	gfx = extractGFX(cartridgeData);
-	map = extractMap(cartridgeData);
-	gff = extractGFF(cartridgeData);
-
-	// Reset key state
-	keyState.fill(false);
-
-	// Bind API resource to picoAPI
-	picoAPI.bindAPIResources(ctx, keyState, { gfx, map, gff });
-
-	// Init Lua VM and register PICO-8 functions
-	vm = null;
-	vm = new LuaVM();
-	Object.entries(picoAPI).forEach(([name, fn]) => {
-		if (typeof fn === "function" && name !== "bindAPIResources") {
-			vm.addFunction(name, fn);
+		// Load cartridge data
+		let cartridgeData;
+		if (rawCartCache[cartridgePath]) {
+			cartridgeData = rawCartCache[cartridgePath];
+		} else {
+			cartridgeData = await extractP8Bytes(cartridgePath);
+			rawCartCache[cartridgePath] = cartridgeData;
 		}
-	});
 
-	// Transpile and execute Lua code
-	const transpiledLua = transpileLua(luaCode);
-	console.log(`Loaded cartridge: ${cartridgePath}`);
-	console.log(transpiledLua);
+		luaCode = extractLua(cartridgeData);
+		gfx = extractGFX(cartridgeData);
+		map = extractMap(cartridgeData);
+		gff = extractGFF(cartridgeData);
 
-	vm.executeCode(transpiledLua);
-	vm.callFunction("_init");
+		// Reset key state
+		keyState.fill(false);
 
-	loadingCartridge = false;
-	showNoCartridgeMessage(false);
+		// Bind API resource to picoAPI
+		picoAPI.bindAPIResources(ctx, keyState, { gfx, map, gff });
 
-	requestAnimationFrame(gameLoop);
+		// Init Lua VM and register PICO-8 functions
+		vm = null;
+		vm = new LuaVM();
+		Object.entries(picoAPI).forEach(([name, fn]) => {
+			if (typeof fn === "function" && name !== "bindAPIResources") {
+				vm.addFunction(name, fn);
+			}
+		});
+
+		// Transpile and execute Lua code
+		const transpiledLua = transpileLua(luaCode);
+		console.log(`Loaded cartridge: ${cartridgePath}`);
+		console.log(transpiledLua);
+
+		vm.executeCode(transpiledLua);
+		vm.callFunction("_init");
+
+		showNoCartridgeMessage(false);
+
+		requestAnimationFrame(gameLoop);
+	} catch (err) {
+		if (err instanceof TypeError) {
+			showShieldWarning();
+		} else {
+			alert("Failed to load cartridge: " + err.message);
+		}
+	} finally {
+		loadingCartridge = false;
+	}
+}
+
+function showShieldWarning() {
+	alert(
+		"The cartridge file loaded appears corrupted or incomplete.\n" +
+			"This can be caused by browser privacy features such as Brave Shields blocking or modifying resources.\n" +
+			"Try disabling Shields for this site or use a different browser/profile."
+	);
 }
 
 function gameLoop(timestamp) {
@@ -137,6 +154,8 @@ const openSelectorBtn = document.getElementById("open-selector");
 const closeSelectorBtn = document.getElementById("close-selector");
 const cartridges = document.querySelectorAll(".cartridge");
 const noCartMessage = document.getElementById("no-cart-message");
+const closeCorsBtn = document.getElementById("close-cors-warning");
+const corsWarning = document.getElementById("cors-warning");
 
 // Show cartridge selector popup
 function openSelector() {
@@ -163,11 +182,14 @@ function showNoCartridgeMessage(show) {
 // Load cartridge and close popup
 async function onCartridgeClick(e) {
 	const img = e.currentTarget;
-	const cartPath = `/${img.dataset.cart}`;
 
 	highlightSelected(img);
 	closeSelector();
-	loadCartridge(cartPath);
+	loadCartridge(img.src);
+}
+
+function closeCorsWarning() {
+	corsWarning.style.display = "none";
 }
 
 // Event listeners
@@ -175,3 +197,4 @@ openSelectorBtn.addEventListener("click", openSelector);
 closeSelectorBtn.addEventListener("click", closeSelector);
 backdrop.addEventListener("click", closeSelector);
 cartridges.forEach((img) => img.addEventListener("click", onCartridgeClick));
+closeCorsBtn.addEventListener("click", closeCorsWarning);

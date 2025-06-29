@@ -134,3 +134,27 @@ canvas {
 	white-space: nowrap;
 	opacity: 0.7;
 }
+
+#cors-warning {
+	background-color: #fff3cd;
+	color: #856404;
+	display: flex;
+	justify-content: space-between;
+	border: 1px solid #ffeeba;
+	padding: 12px 20px;
+	margin: 12px;
+	border-radius: 4px;
+	font-family: sans-serif;
+	font-size: 14px;
+}
+
+#close-cors-warning {
+	top: 8px;
+	right: 8px;
+	background: transparent;
+	border: none;
+	font-size: 16px;
+	font-weight: 600;
+	cursor: pointer;
+	color: #856404;
+}

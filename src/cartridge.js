@@ -24,6 +24,7 @@ const encoder = new TextEncoder();
 async function loadP8PNG(url) {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
+		img.crossOrigin = "anonymous";
 		img.onload = () => {
 			// Create canvas
 			const canvas = document.createElement("canvas");

@@ -9,6 +9,14 @@
 	</head>
 	<body>
 		<main>
+			<div id="cors-warning">
+				<span>
+					⚠️ To ensure cartridges load properly, please disable browser shields or privacy settings that block
+					image/script loading.
+				</span>
+				<button id="close-cors-warning" aria-label="Close warning">x</button>
+			</div>
+
 			<h1>PICO-8 Emulator</h1>
 
 			<button id="open-selector">Select Cartridge</button>
@@ -23,16 +31,14 @@
 				</h2>
 				<div class="selector">
 					<img
-						src="/assets/wander.p8.png"
+						src="https://brooklyn-dev-pico-8-cartridges.netlify.app/wander.p8.png"
 						alt="wander cartridge"
 						class="cartridge"
-						data-cart="assets/wander.p8.png"
 					/>
 					<img
-						src="/assets/waves.p8.png"
+						src="https://brooklyn-dev-pico-8-cartridges.netlify.app/waves.p8.png"
 						alt="waves cartridge"
 						class="cartridge"
-						data-cart="assets/waves.p8.png"
 					/>
 				</div>
 				<button id="close-selector">Close</button>
