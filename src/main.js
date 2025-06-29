@@ -3,26 +3,60 @@ import LuaVM from "./luaVM";
 import transpileLua from "./transpileLua.js";
 import * as picoAPI from "./pico8api.js";
 
-// Setup canvas
-const canvas = document.createElement("canvas");
-canvas.width = 128;
-canvas.height = 128;
+// --- CONSTANTS ---
 
-const container = document.querySelector(".game-container");
-container.appendChild(canvas);
+const PICO8_FPS = 30;
+const FRAME_TIME = 1000 / PICO8_FPS;
 
-const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
-
-// Keyboard input
-const keyState = new Array(8).fill(false);
-
+// PICO-8 key mappings
 const keyMap = {
 	ArrowLeft: 0,
 	ArrowRight: 1,
 	ArrowUp: 2,
 	ArrowDown: 3,
 };
+
+// --- GLOBAL STATE ---
+
+// Game loop and cartridge state
+let animationFrameId = null;
+let currentCartVersion = 0;
+let loadingCartridge = false;
+let paused = false;
+
+// Timing variables for frame-rate limiting
+let lastFrameTime = 0;
+let accumulatedTime = 0;
+
+// PICO-8 cartridge data
+let vm = null;
+let luaCode = null;
+let gfx = null;
+let map = null;
+let gff = null;
+
+// Input state (8 buttons max)
+const keyState = new Array(8).fill(false);
+
+// Cartridge caching to avoid re-loading
+const rawCartCache = {};
+
+// --- CANVAS SETUP ---
+
+// Create and config main game canvs
+const canvas = document.createElement("canvas");
+canvas.width = 128;
+canvas.height = 128;
+canvas.tabIndex = 0; // Focusable
+
+const container = document.querySelector(".game-container");
+container.appendChild(canvas);
+canvas.focus();
+
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false; // Pixel-perfect rendering
+
+// --- INPUT HANDLING ---
 
 document.addEventListener("keydown", (e) => {
 	const btn = keyMap[e.key];
@@ -40,30 +74,33 @@ document.addEventListener("keyup", (e) => {
 	}
 });
 
-const PICO8_FPS = 30;
-const FRAME_TIME = 1000 / PICO8_FPS;
+// --- PAUSE/RESUME ---
 
-let lastFrameTime = 0;
-let accumulatedTime = 0;
+function pauseCartridge() {
+	paused = true;
+	console.log("Paused");
+}
 
-let vm = null;
-let luaCode = null;
-let gfx = null;
-let map = null;
-let gff = null;
+function resumeCartridge() {
+	if (!paused) return;
 
-const rawCartCache = {};
+	paused = false;
+	lastFrameTime = performance.now();
+	gameLoop(lastFrameTime);
+	console.log("Resumed");
+}
 
-let loadingCartridge = false;
+// --- CARTRIDGE LOADING ---
 
 async function loadCartridge(cartridgePath) {
 	try {
 		loadingCartridge = true;
 
+		// Reset timing variables
 		lastFrameTime = 0;
 		accumulatedTime = 0;
 
-		// Load cartridge data
+		// Load cartridge data (with caching)
 		let cartridgeData;
 		if (rawCartCache[cartridgePath]) {
 			cartridgeData = rawCartCache[cartridgePath];
@@ -72,6 +109,7 @@ async function loadCartridge(cartridgePath) {
 			rawCartCache[cartridgePath] = cartridgeData;
 		}
 
+		// Extract cartridge sections
 		luaCode = extractLua(cartridgeData);
 		gfx = extractGFX(cartridgeData);
 		map = extractMap(cartridgeData);
@@ -80,10 +118,10 @@ async function loadCartridge(cartridgePath) {
 		// Reset key state
 		keyState.fill(false);
 
-		// Bind API resource to picoAPI
+		// Init PICO-8 API and bind cartridge resources
 		picoAPI.bindAPIResources(ctx, keyState, { gfx, map, gff });
 
-		// Init Lua VM and register PICO-8 functions
+		// Init Lua VM and register PICO-8 API functions
 		vm = null;
 		vm = new LuaVM();
 		Object.entries(picoAPI).forEach(([name, fn]) => {
@@ -92,17 +130,30 @@ async function loadCartridge(cartridgePath) {
 			}
 		});
 
-		// Transpile and execute Lua code
+		// Transpile and execute cartridge Lua code
 		const transpiledLua = transpileLua(luaCode);
 		console.log(`Loaded cartridge: ${cartridgePath}`);
-		console.log(transpiledLua);
 
 		vm.executeCode(transpiledLua);
-		vm.callFunction("_init");
+		vm.callFunction("_init"); // Call cartridge init function
 
+		// Update UI state
 		showNoCartridgeMessage(false);
 
-		requestAnimationFrame(gameLoop);
+		loadingCartridge = false; // Finished loading
+
+		// Stop existing game loop
+		if (animationFrameId !== null) {
+			cancelAnimationFrame(animationFrameId);
+			animationFrameId = null;
+		}
+
+		// Start new game loop with fresh version
+		currentCartVersion++;
+		gameLoop(performance.now());
+
+		// Focus canvas (resume)
+		canvas.focus();
 	} catch (err) {
 		if (err instanceof TypeError) {
 			showShieldWarning();
@@ -122,32 +173,54 @@ function showShieldWarning() {
 	);
 }
 
+/// --- GAME LOOP ---
+
 function gameLoop(timestamp) {
 	if (!vm) {
 		showNoCartridgeMessage(true);
 		return;
 	}
 
-	if (loadingCartridge) return;
+	if (loadingCartridge || paused) return;
 
-	requestAnimationFrame(gameLoop);
-
-	const deltaTime = timestamp - lastFrameTime;
+	// Init timing varables
 	lastFrameTime = timestamp;
-	accumulatedTime += deltaTime;
+	accumulatedTime = 0;
 
-	while (accumulatedTime >= FRAME_TIME) {
-		ctx.setTransform(1, 0, 0, 1, 0, 0);
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
+	// Detect cartridge changes
+	const myCartVersion = currentCartVersion;
+	const loop = (time) => {
+		if (myCartVersion !== currentCartVersion || paused || !vm) return;
 
-		vm.callFunction("_update");
-		vm.callFunction("_draw");
+		// Calculate frame timing
+		const deltaTime = time - lastFrameTime;
+		lastFrameTime = time;
+		accumulatedTime += deltaTime;
 
-		accumulatedTime -= FRAME_TIME;
-	}
+		// Process frames at fixed rate (30FPS)
+		while (accumulatedTime >= FRAME_TIME) {
+			// Reset canvas
+			ctx.setTransform(1, 0, 0, 1, 0, 0);
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+			// Call PICO-8 lifecycle functions
+			vm.callFunction("_update");
+			vm.callFunction("_draw");
+
+			accumulatedTime -= FRAME_TIME;
+		}
+
+		// Schedule next frame
+		animationFrameId = requestAnimationFrame(loop);
+	};
+
+	// Start the loop
+	animationFrameId = requestAnimationFrame(loop);
 }
 
-// UI
+// --- UI MANAGEMENT ---
+
+// UI Elements
 const selectorPopup = document.getElementById("selector-popup");
 const backdrop = document.getElementById("backdrop");
 const openSelectorBtn = document.getElementById("open-selector");
@@ -175,6 +248,7 @@ function highlightSelected(selectedImg) {
 	if (selectedImg) selectedImg.classList.add("selected");
 }
 
+// Show/hide no cartridge message
 function showNoCartridgeMessage(show) {
 	noCartMessage.style.display = show ? "block" : "none";
 }
@@ -188,13 +262,29 @@ async function onCartridgeClick(e) {
 	loadCartridge(img.src);
 }
 
+// Closes the CORS warning
 function closeCorsWarning() {
 	corsWarning.style.display = "none";
 }
 
-// Event listeners
+// --- EVENT LISTENERS ---
+
+// UI events listeners
 openSelectorBtn.addEventListener("click", openSelector);
 closeSelectorBtn.addEventListener("click", closeSelector);
 backdrop.addEventListener("click", closeSelector);
 cartridges.forEach((img) => img.addEventListener("click", onCartridgeClick));
 closeCorsBtn.addEventListener("click", closeCorsWarning);
+
+// Pause/resume when tab becomes inactive/active
+document.addEventListener("visibilitychange", () => {
+	if (document.hidden) {
+		pauseCartridge();
+	} else {
+		resumeCartridge();
+	}
+});
+
+// Pause/resume when canvas loses/gains focus
+canvas.addEventListener("blur", pauseCartridge);
+canvas.addEventListener("focus", resumeCartridge);
